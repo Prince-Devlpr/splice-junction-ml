@@ -1,65 +1,33 @@
 from flask import Blueprint, request, jsonify
-from model.kbann import get_kbann_prediction_details
-from model.deep_model import get_dl_prediction_details
-
+from model.kbann import predict_kbann
+from model.deep_model import predict_dl
 predict_bp = Blueprint("predict", __name__)
-
-
-def _validate_sequence(payload):
-    if not payload:
-        return None
-    sequence = payload.get("sequence")
-    if not sequence or not sequence.strip():
-        return None
-    return sequence.strip()
-
 
 @predict_bp.route("/predict/kbann", methods=["POST"])
 def predict():
-    sequence = _validate_sequence(request.json)
-    if sequence is None:
-        return jsonify({"error": "A non-empty 'sequence' field is required."}), 400
+    data = request.json
+    seq = data.get("sequence")
 
-    details = get_kbann_prediction_details(sequence)
+    label, confidence = predict_kbann(seq)
 
     return jsonify({
-        "model": "KBANN",
-        "sequence": sequence,
-        "prediction": details["prediction"],
-        "confidence": details["confidence"],
-        "probabilities": details["probabilities"],
-        "features": details["features"]
+        "sequence": seq,
+        "prediction": label,
+        "confidence": confidence
     })
+    
 
 
 @predict_bp.route("/predict/dl", methods=["POST"])
 def predict_dl_route():
-    sequence = _validate_sequence(request.json)
-    if sequence is None:
-        return jsonify({"error": "A non-empty 'sequence' field is required."}), 400
+    data = request.json
+    seq = data.get("sequence")
 
-    details = get_dl_prediction_details(sequence)
+    label, confidence = predict_dl(seq)
 
     return jsonify({
         "model": "Deep Learning",
-        "sequence": sequence,
-        "prediction": details["prediction"],
-        "confidence": details["confidence"],
-        "probabilities": details["probabilities"]
-    })
-
-
-@predict_bp.route("/predict/compare", methods=["POST"])
-def predict_compare_route():
-    sequence = _validate_sequence(request.json)
-    if sequence is None:
-        return jsonify({"error": "A non-empty 'sequence' field is required."}), 400
-
-    kbann_result = get_kbann_prediction_details(sequence)
-    dl_result = get_dl_prediction_details(sequence)
-
-    return jsonify({
-        "sequence": sequence,
-        "KBANN": kbann_result,
-        "DeepLearning": dl_result
+        "sequence": seq,
+        "prediction": label,
+        "confidence": confidence
     })
